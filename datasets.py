@@ -53,12 +53,12 @@ def make_reuters_data(data_dir):
     x = x[:10000]
     y = y[:10000]
     x = np.asarray(x.todense()) * np.sqrt(x.shape[1])
-    print 'todense succeed'
+    print('todense succeed')
 
     p = np.random.permutation(x.shape[0])
     x = x[p]
     y = y[p]
-    print 'permutation finished'
+    print('permutation finished')
 
     assert x.shape[0] == y.shape[0]
     x = x.reshape((x.shape[0], x.size / x.shape[0]))
@@ -67,13 +67,13 @@ def make_reuters_data(data_dir):
 
 def load_mnist():
     # the data, shuffled and split between train and test sets
-    from keras.datasets import mnist
+    from tensorflow.keras.datasets import mnist
     (x_train, y_train), (x_test, y_test) = mnist.load_data()
     x = np.concatenate((x_train, x_test))
     y = np.concatenate((y_train, y_test))
     x = x.reshape((x.shape[0], -1))
     x = np.divide(x, 50.)  # normalize as it does in DEC paper
-    print 'MNIST samples', x.shape
+    print('MNIST samples', x.shape)
     return x, y
 
 
@@ -102,21 +102,21 @@ def load_usps(data_path='./data/usps'):
 
     x = np.concatenate((data_train, data_test)).astype('float64')
     y = np.concatenate((labels_train, labels_test))
-    print 'USPS samples', x.shape
+    print('USPS samples', x.shape)
     return x, y
 
 
 def load_reuters(data_path='./data/reuters'):
     import os
     if not os.path.exists(os.path.join(data_path, 'reutersidf10k.npy')):
-        print 'making reuters idf features'
+        print('making reuters idf features')
         make_reuters_data(data_path)
-        print 'reutersidf saved to ' + data_path
+        print('reutersidf saved to ' + data_path)
     data = np.load(os.path.join(data_path, 'reutersidf10k.npy')).item()
     # has been shuffled
     x = data['data']
     y = data['label']
     x = x.reshape((x.shape[0], x.size / x.shape[0])).astype('float64')
     y = y.reshape((y.size,))
-    print 'REUTERSIDF10K samples', x.shape
+    print('REUTERSIDF10K samples', x.shape)
     return x, y
