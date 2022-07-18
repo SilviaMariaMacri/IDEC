@@ -20,7 +20,7 @@ import numpy as np
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import SGD
 from tensorflow.python.keras.utils.vis_utils import plot_model
-
+import os
 from sklearn.cluster import KMeans
 from sklearn import metrics
 
@@ -48,11 +48,11 @@ class IDEC(object):
     def initialize_model(self, ae_weights=None, gamma=0.1, optimizer='adam',server=True,ae_weights_dir=None):
         if ae_weights is not None:
             if args.server == True:
-                import os
+                
                 os.chdir('/home/STUDENTI/silviamaria.macri/DEC-keras/'+ae_weights_dir) 
                 self.autoencoder.load_weights(ae_weights)
                 print('Pretrained AE weights are loaded successfully.')
-                os.chdir('/home/STUDENTI/silviamaria.macri/IDEC)
+                os.chdir('/home/STUDENTI/silviamaria.macri/IDEC')
             else:
                 self.autoencoder.load_weights(ae_weights)
                 print('Pretrained AE weights are loaded successfully.')                
@@ -106,7 +106,7 @@ class IDEC(object):
         self.model.get_layer(name='clustering').set_weights([kmeans.cluster_centers_])
 
         # logging file
-        import csv, os
+        import csv
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
         logfile = open(save_dir + '/idec_log.csv', 'w')
@@ -190,10 +190,13 @@ if __name__ == "__main__":
     parser.add_argument('--server', default=True)
     parser.add_argument('--ae_weights_dir')
     parser.add_argument('--ae_weights', default='ae_weights.h5', help='This argument must be given')
-    parser.add_argument('--save_dir', default='results/mnist0')
+    parser.add_argument('--save_dir', default='results/prova')
+    parser.add_srgument('--excl_data_dupl',default=None)
     args = parser.parse_args()
     print(args)
-
+    
+    if not os.path.exists(args.save_dir):
+        os.makedirs(args.save_dir)
     import json
     with open(args.save_dir+'/config.json', 'w') as file:
         json.dump(vars(args), file)
@@ -224,14 +227,14 @@ if __name__ == "__main__":
         import json
         x = json.load(open('euromds.json','r'))
         x = np.array(x)
-        if exclude_data_duplicates == True:
+        if args.excl_data_dupl == True:
             # exclude duplicate rows:
-        x = np.unique(x,axis=0)
+            x = np.unique(x,axis=0)
         
    
     # prepare the IDEC model
     idec = IDEC(dims=[x.shape[-1], 500, 500, 2000, 10], n_clusters=args.n_clusters, batch_size=args.batch_size)
-    idec.initialize_model(ae_weights=args.ae_weights, gamma=args.gamma, optimizer=optimizer,server==args.server,ae_weights_dir=args.ae_weights_dir)
+    idec.initialize_model(ae_weights=args.ae_weights, gamma=args.gamma, optimizer=optimizer,server=args.server,ae_weights_dir=args.ae_weights_dir)
     plot_model(idec.model, to_file='idec_model.png', show_shapes=True)
     idec.model.summary()
 
