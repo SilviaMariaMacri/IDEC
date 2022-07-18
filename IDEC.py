@@ -45,10 +45,17 @@ class IDEC(object):
         self.batch_size = batch_size
         self.autoencoder = autoencoder(self.dims)
 
-    def initialize_model(self, ae_weights=None, gamma=0.1, optimizer='adam'):
+    def initialize_model(self, ae_weights=None, gamma=0.1, optimizer='adam',server=True,ae_weights_dir=None):
         if ae_weights is not None:
-            self.autoencoder.load_weights(ae_weights)
-            print('Pretrained AE weights are loaded successfully.')
+            if args.server == True:
+                import os
+                os.chdir('/home/STUDENTI/silviamaria.macri/DEC-keras/'+ae_weights_dir) 
+                self.autoencoder.load_weights(ae_weights)
+                print('Pretrained AE weights are loaded successfully.')
+                os.chdir('/home/STUDENTI/silviamaria.macri/IDEC)
+            else:
+                self.autoencoder.load_weights(ae_weights)
+                print('Pretrained AE weights are loaded successfully.')                
         else:
             print('ae_weights must be given. E.g.')
             print('    python IDEC.py mnist --ae_weights weights.h5')
@@ -102,13 +109,14 @@ class IDEC(object):
         import csv, os
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
-        logfile = file(save_dir + '/idec_log.csv', 'wb')
+        logfile = open(save_dir + '/idec_log.csv', 'w')
         logwriter = csv.DictWriter(logfile, fieldnames=['iter', 'acc', 'nmi', 'ari', 'L', 'Lc', 'Lr'])
         logwriter.writeheader()
 
         loss = [0, 0, 0]
         index = 0
         for ite in range(int(maxiter)):
+            print('ite: ',ite)
             if ite % update_interval == 0:
                 q, _ = self.model.predict(x, verbose=0)
                 p = self.target_distribution(q)  # update the auxiliary target distribution p
@@ -143,11 +151,12 @@ class IDEC(object):
                                                  y=[p[index * self.batch_size:(index + 1) * self.batch_size],
                                                     x[index * self.batch_size:(index + 1) * self.batch_size]])
                 index += 1
-
+            print('loss: ',loss)
             # save intermediate model
             if ite % save_interval == 0:
                 # save IDEC model checkpoints
                 print('saving model to:', save_dir + '/IDEC_model_' + str(ite) + '.h5')
+                #self.model.save(save_dir + '/IDEC_model_' + str(ite) + '.h5')
                 self.model.save_weights(save_dir + '/IDEC_model_' + str(ite) + '.h5')
 
             ite += 1
@@ -155,32 +164,52 @@ class IDEC(object):
         # save the trained model
         logfile.close()
         print('saving model to:', save_dir + '/IDEC_model_final.h5')
+        #self.model.save(save_dir + '/IDEC_model_final.h5')
         self.model.save_weights(save_dir + '/IDEC_model_final.h5')
         
         return y_pred
 
 
+
 if __name__ == "__main__":
     # setting the hyper parameters
+
+
     import argparse
 
     parser = argparse.ArgumentParser(description='train',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('dataset', default='mnist', choices=['mnist', 'usps', 'reutersidf10k'])
+    parser.add_argument('--dataset', default='mnist', choices=['euromds','mnist', 'usps', 'reutersidf10k'])
     parser.add_argument('--n_clusters', default=10, type=int)
-    parser.add_argument('--batch_size', default=256, type=int)
+    parser.add_argument('--batch_size', default=265, type=int)
     parser.add_argument('--maxiter', default=2e4, type=int)
     parser.add_argument('--gamma', default=0.1, type=float,
                         help='coefficient of clustering loss')
     parser.add_argument('--update_interval', default=140, type=int)
     parser.add_argument('--tol', default=0.001, type=float)
-    parser.add_argument('--ae_weights', default=None, help='This argument must be given')
-    parser.add_argument('--save_dir', default='results/idec')
+    parser.add_argument('--server', default=True)
+    parser.add_argument('--ae_weights_dir')
+    parser.add_argument('--ae_weights', default='ae_weights.h5', help='This argument must be given')
+    parser.add_argument('--save_dir', default='results/mnist0')
     args = parser.parse_args()
     print(args)
 
+    import json
+    with open(args.save_dir+'/config.json', 'w') as file:
+        json.dump(vars(args), file)
+
     # load dataset
     optimizer = SGD(lr=0.1, momentum=0.99)
+    '''
+    tf.keras.optimizers.Adam(
+    learning_rate=0.001,
+    beta_1=0.9,
+    beta_2=0.999,
+    epsilon=1e-07,
+    amsgrad=False,
+    name="Adam",
+    )
+    '''
     from datasets import load_mnist, load_reuters, load_usps
 
     if args.dataset == 'mnist':  # recommends: n_clusters=10, update_interval=140
@@ -190,16 +219,25 @@ if __name__ == "__main__":
         x, y = load_usps('data/usps')
     elif args.dataset == 'reutersidf10k':  # recommends: n_clusters=4, update_interval=3
         x, y = load_reuters('data/reuters')
-
+    
+    if args.dataset == 'euromds':
+        import json
+        x = json.load(open('euromds.json','r'))
+        x = np.array(x)
+        if exclude_data_duplicates == True:
+            # exclude duplicate rows:
+        x = np.unique(x,axis=0)
+        
+   
     # prepare the IDEC model
     idec = IDEC(dims=[x.shape[-1], 500, 500, 2000, 10], n_clusters=args.n_clusters, batch_size=args.batch_size)
-    idec.initialize_model(ae_weights=args.ae_weights, gamma=args.gamma, optimizer=optimizer)
+    idec.initialize_model(ae_weights=args.ae_weights, gamma=args.gamma, optimizer=optimizer,server==args.server,ae_weights_dir=args.ae_weights_dir)
     plot_model(idec.model, to_file='idec_model.png', show_shapes=True)
     idec.model.summary()
 
     # begin clustering, time not include pretraining part.
     t0 = time()
-    y_pred = idec.clustering(x, y=y, tol=args.tol, maxiter=args.maxiter,
+    y_pred = idec.clustering(x, y=None, tol=args.tol, maxiter=args.maxiter,
                              update_interval=args.update_interval, save_dir=args.save_dir)
     print('acc:', cluster_acc(y, y_pred))
     print('clustering time: ', (time() - t0))
