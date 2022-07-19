@@ -11,7 +11,7 @@ Usage:
         python DEC.py reutersidf10k --n_clusters 4 --update_interval 20 --ae_weights ./ae_weights/reutersidf10k_ae_weights.h5
 
 Author:
-    Xifeng Guo. 2017.1.30 file
+    Xifeng Guo. 2017.1.30 file 
 """
 
 from time import time
@@ -269,7 +269,7 @@ class DEC(object):
         self.model.save_weights(save_dir + '/DEC_model_final.h5')
 
         return y_pred
-#%%
+
 
 if __name__ == "__main__":
     # setting the hyper parameters
@@ -304,6 +304,7 @@ if __name__ == "__main__":
 
     dec.initialize_model(optimizer=SGD(lr=0.01, momentum=0.9),
                          ae_weights=args.ae_weights)
+
     plot_model(dec.model, to_file='dec_model.png', show_shapes=True)
     dec.model.summary()
     t0 = time()

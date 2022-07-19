@@ -12,14 +12,14 @@ Usage:
         python IDEC.py reutersidf10k --n_clusters 4 --update_interval 3 --ae_weights ./ae_weights/reutersidf10k_ae_weights.h5
 
 Author:
-    Xifeng Guo. 2017.4.30
+    Xifeng Guo. 2017.4.30 
 """
 
 from time import time
 import numpy as np
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import SGD
-from tensorflow.python.keras.utils.vis_utils import plot_model
+#from tensorflow.python.keras.utils.vis_utils import plot_model
 import os
 from sklearn.cluster import KMeans
 from sklearn import metrics
@@ -45,17 +45,10 @@ class IDEC(object):
         self.batch_size = batch_size
         self.autoencoder = autoencoder(self.dims)
 
-    def initialize_model(self, ae_weights=None, gamma=0.1, optimizer='adam',server=True,ae_weights_dir=None):
+    def initialize_model(self, ae_weights=None, gamma=0.1, optimizer='adam'):
         if ae_weights is not None:
-            if args.server == True:
-                
-                os.chdir('/home/STUDENTI/silviamaria.macri/DEC-keras/'+ae_weights_dir) 
-                self.autoencoder.load_weights(ae_weights)
-                print('Pretrained AE weights are loaded successfully.')
-                os.chdir('/home/STUDENTI/silviamaria.macri/IDEC')
-            else:
-                self.autoencoder.load_weights(ae_weights)
-                print('Pretrained AE weights are loaded successfully.')                
+            self.autoencoder.load_weights(ae_weights)
+            print('Pretrained AE weights are loaded successfully.')                
         else:
             print('ae_weights must be given. E.g.')
             print('    python IDEC.py mnist --ae_weights weights.h5')
@@ -67,8 +60,8 @@ class IDEC(object):
         # prepare IDEC model
         clustering_layer = ClusteringLayer(self.n_clusters, name='clustering')(hidden)
         self.model = Model(inputs=self.autoencoder.input,
-                           outputs=[clustering_layer, self.autoencoder.output])
-        self.model.compile(loss={'clustering': 'kld', 'decoder_0': 'mse'},
+                           outputs=clustering_layer)#[clustering_layer, self.autoencoder.output])
+        self.model.compile(loss={'clustering': 'kld'},# 'decoder_0': 'mse'},
                            loss_weights=[gamma, 1],
                            optimizer=optimizer)
 
@@ -172,7 +165,7 @@ class IDEC(object):
 
 
 if __name__ == "__main__":
-    # setting the hyper parameters
+    # setting the hyper parameters 
 
 
     import argparse
@@ -183,15 +176,15 @@ if __name__ == "__main__":
     parser.add_argument('--n_clusters', default=10, type=int)
     parser.add_argument('--batch_size', default=265, type=int)
     parser.add_argument('--maxiter', default=2e4, type=int)
-    parser.add_argument('--gamma', default=0.1, type=float,
+    parser.add_argument('--gamma', default=1, type=float,
                         help='coefficient of clustering loss')
     parser.add_argument('--update_interval', default=140, type=int)
     parser.add_argument('--tol', default=0.001, type=float)
-    parser.add_argument('--server', default=True)
+    parser.add_argument('--server', default=False)
     parser.add_argument('--ae_weights_dir')
-    parser.add_argument('--ae_weights', default='ae_weights.h5', help='This argument must be given')
-    parser.add_argument('--save_dir', default='results/prova')
-    parser.add_srgument('--excl_data_dupl',default=None)
+    parser.add_argument('--ae_weights', default='ae_weights_mnist1.h5', help='This argument must be given')
+    parser.add_argument('--save_dir', default='prova')
+    parser.add_argument('--excl_data_dupl',default=None)
     args = parser.parse_args()
     print(args)
     
@@ -223,6 +216,7 @@ if __name__ == "__main__":
     elif args.dataset == 'reutersidf10k':  # recommends: n_clusters=4, update_interval=3
         x, y = load_reuters('data/reuters')
     
+    
     if args.dataset == 'euromds':
         import json
         x = json.load(open('euromds.json','r'))
@@ -230,14 +224,14 @@ if __name__ == "__main__":
         if args.excl_data_dupl == True:
             # exclude duplicate rows:
             x = np.unique(x,axis=0)
-        
+ #%%       
    
     # prepare the IDEC model
     idec = IDEC(dims=[x.shape[-1], 500, 500, 2000, 10], n_clusters=args.n_clusters, batch_size=args.batch_size)
-    idec.initialize_model(ae_weights=args.ae_weights, gamma=args.gamma, optimizer=optimizer,server=args.server,ae_weights_dir=args.ae_weights_dir)
-    plot_model(idec.model, to_file='idec_model.png', show_shapes=True)
+    idec.initialize_model(ae_weights=args.ae_weights, gamma=args.gamma, optimizer=optimizer)
+    #plot_model(idec.model, to_file='idec_model.png', show_shapes=True)
     idec.model.summary()
-
+#%%
     # begin clustering, time not include pretraining part.
     t0 = time()
     y_pred = idec.clustering(x, y=None, tol=args.tol, maxiter=args.maxiter,
