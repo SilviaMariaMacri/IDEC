@@ -17,7 +17,7 @@ Author:
 from time import time
 import numpy as np
 import tensorflow.keras.backend as K
-from tensorflow.python.keras.layers import Layer, InputSpec
+from tensorflow.python.keras.layers import Layer, InputSpec #modificare questa libreria da errore
 from tensorflow.keras.layers import Dense, Input
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import SGD
